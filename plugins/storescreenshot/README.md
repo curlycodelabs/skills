@@ -13,14 +13,9 @@ In Claude Code:
 
 ## Connect your account
 
-1. Create a token at https://storescreenshot.app/dashboard/settings/api-tokens and copy it.
-2. Save it once (it is read from the clipboard, so it never lands in your shell history):
+Nothing to set up. The first time you ask for screenshots, Claude opens a StoreScreenshot page in your browser: sign in, or sign up for free, and click **Authorize**. The token is saved on your machine for every later session.
 
-```bash
-pbpaste | node "$(find ~/.claude/plugins -path '*storescreenshot/scripts/storescreenshot.mjs' | head -1)" login
-```
-
-`STORESCREENSHOT_TOKEN` in the environment still works and takes priority over the saved token.
+No browser on that machine? Create a token in Settings, API tokens, and pipe it to `storescreenshot.mjs login --token-stdin`. `STORESCREENSHOT_TOKEN` in the environment also works and takes priority over the saved token.
 
 ## Use it
 

@@ -16,14 +16,15 @@ The whole run should take a few minutes. Most of the time is lost to the same mi
 - **Stay inside the user's app.** Never open Health, Settings, Photos or any other app to create data. If a screen depends on system data you cannot produce from the app, pick another screen or accept the empty value.
 - **Do not look at the screen between taps** when you already know the layout from the code or an earlier capture. Look only when you do not know where to tap next.
 - **Capture first, review once.** Take all captures in one pass, then review them together (step 8). Never open each capture right after taking it.
-- **Ask everything in one message.** The plan, the demo data change and anything blocking (missing token, simulator access) go in the same message in step 5, so the user answers once.
+- **Ask everything in one message.** The plan, the demo data change and anything blocking (simulator access) go in the same message in step 5, so the user answers once.
 
 ## 1. Check the setup
 
 1. Run `xcrun simctl help` to confirm Xcode command line tools are present. If not, tell the user to install Xcode and stop.
 2. Find the app: an `.xcworkspace`, an `.xcodeproj`, a `Package.swift` app target, or an Expo or React Native project with an `ios` folder. If there is none, say this skill needs an iOS app and stop.
-3. Run `node <skill dir>/scripts/storescreenshot.mjs me`. It reads `STORESCREENSHOT_TOKEN` from the environment, or the token saved by the `login` command.
-   - If the token is missing or refused, do not stop: keep going with steps 2 to 4 and put the fix in the step 5 message. The fix is to create a token at https://storescreenshot.app/dashboard/settings/api-tokens, copy it, and run `pbpaste | node <skill dir>/scripts/storescreenshot.mjs login` in their own terminal. The token is read from stdin, so it never lands in shell history, and it is saved for every later session. A token exported in another terminal tab is invisible to you, so always suggest `login` rather than `export`.
+3. Run `node <skill dir>/scripts/storescreenshot.mjs me`. It reads the token saved by `login`, or `STORESCREENSHOT_TOKEN` from the environment.
+   - If it says the account is not connected or the token was refused, connect it right away, before anything else: tell the user in one line that a browser page is opening where they sign in (or sign up for free) and click Authorize, then run `node <skill dir>/scripts/storescreenshot.mjs login` with a 10 minute timeout. The script opens the page, waits for the approval, and saves the token for every later session. Never ask the user to paste a token in the conversation. If they deny or let the code expire, offer to run `login` again. On a machine without a browser, they can create a token in Settings, API tokens, and pipe it to `login --token-stdin` in their own terminal.
+   - Then run `me` again to read the credits.
    - Otherwise note the remaining screenshot credits.
 4. `STORESCREENSHOT_API_URL` points the script at another server, for example a development one. Pass it on every command when the user asks for it.
 
@@ -75,7 +76,7 @@ Show the user, in one short message:
 - the demo data change you propose, if any
 - the app name and the description
 - the cost: one screenshot credit per screen, and the credits they have left
-- anything still blocking, with the exact fix: the token (`login` command from step 1), or simulator access if the session needs it
+- anything still blocking, with the exact fix, such as simulator access if the session needs it
 
 If they do not have enough credits, say so and give the pricing link before you capture anything. Wait for their go-ahead. Apply any change they ask for.
 
