@@ -1,0 +1,8 @@
+{
+  "name": "storescreenshot",
+  "version": "0.1.0",
+  "description": "Capture your iOS app in the simulator and turn the screens into App Store screenshots on StoreScreenshot.",
+  "author": { "name": "StoreScreenshot", "url": "https://storescreenshot.app" },
+  "homepage": "https://storescreenshot.app",
+  "license": "MIT"
+}

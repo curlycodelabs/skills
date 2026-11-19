@@ -1,0 +1,11 @@
+{
+  "name": "storescreenshot",
+  "owner": { "name": "StoreScreenshot", "url": "https://storescreenshot.app" },
+  "plugins": [
+    {
+      "name": "storescreenshot",
+      "source": "./",
+      "description": "Capture your iOS app in the simulator and turn the screens into App Store screenshots on StoreScreenshot."
+    }
+  ]
+}
