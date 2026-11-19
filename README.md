@@ -4,13 +4,13 @@ Claude Code plugins by [CurlyCode Labs](https://github.com/curlycodelabs).
 
 ## Add the marketplace
 
-In Claude Code:
+In your terminal:
 
-```
-/plugin marketplace add curlycodelabs/skills
+```bash
+claude plugin marketplace add curlycodelabs/skills
 ```
 
-Then install any plugin below with `/plugin install <name>@curlycode`, and just ask Claude for what you need.
+Or inside Claude Code: `/plugin marketplace add curlycodelabs/skills`. Then install any plugin below with `claude plugin install <name>@curlycode` (or `/plugin install <name>@curlycode`, in its own message), and just ask Claude for what you need.
 
 ## Plugins
 

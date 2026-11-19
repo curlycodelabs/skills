@@ -4,10 +4,19 @@ Turn your iOS app into App Store screenshots without leaving the terminal. Claud
 
 ## Install
 
-In Claude Code:
+In your terminal, from your app's folder. This installs the plugin and opens Claude Code with the request:
+
+```bash
+claude plugin marketplace add curlycodelabs/skills && claude plugin install storescreenshot@curlycode && claude "Create App Store screenshots for my app with StoreScreenshot"
+```
+
+Already inside Claude Code or the desktop app? Send these one per message (Claude Code runs one slash command at a time), then restart Claude Code:
 
 ```
 /plugin marketplace add curlycodelabs/skills
+```
+
+```
 /plugin install storescreenshot@curlycode
 ```
 
