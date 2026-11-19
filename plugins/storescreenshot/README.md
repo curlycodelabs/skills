@@ -19,7 +19,13 @@ No browser on that machine? Create a token in Settings, API tokens, and pipe it 
 
 ## Use it
 
-Open Claude Code in your app's folder and ask for App Store screenshots, or run `/storescreenshot`. Claude shows you the screens it plans to capture, the app description, and the cost in credits before anything is sent. One screenshot credit per screen.
+Open Claude Code in your app's folder and ask:
+
+```
+Create App Store screenshots for my app with StoreScreenshot
+```
+
+`/storescreenshot` does the same. Claude shows you the screens it plans to capture, the app description, and the cost in credits before anything is sent. One screenshot credit per screen.
 
 ## Requirements
 

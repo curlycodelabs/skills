@@ -10,7 +10,7 @@ In Claude Code:
 /plugin marketplace add curlycodelabs/skills
 ```
 
-Then install any plugin below with `/plugin install <name>@curlycode`.
+Then install any plugin below with `/plugin install <name>@curlycode`, and just ask Claude for what you need.
 
 ## Plugins
 
