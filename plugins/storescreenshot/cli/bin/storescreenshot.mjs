@@ -5,16 +5,29 @@ import { homedir } from 'node:os';
 import { dirname, extname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-const API_URL = (
-  process.env.STORESCREENSHOT_API_URL ?? 'https://storescreenshot.app'
-).replace(/\/$/, '');
+const DEFAULT_API_URL = 'https://storescreenshot.app';
 
-const TOKEN_FILE = join(homedir(), '.config', 'storescreenshot', 'token');
+const API_URL = (process.env.STORESCREENSHOT_API_URL || DEFAULT_API_URL).replace(
+  /\/$/,
+  '',
+);
 
-const TOKEN = process.env.STORESCREENSHOT_TOKEN ?? (await readSavedToken());
+function tokenFileName() {
+  if (API_URL === DEFAULT_API_URL) {
+    return 'token';
+  }
+
+  return `token-${new URL(API_URL).host.replace(/[^a-z0-9.-]/gi, '_')}`;
+}
+
+const TOKEN_FILE = join(homedir(), '.config', 'storescreenshot', tokenFileName());
+
+const TOKEN = process.env.STORESCREENSHOT_TOKEN || (await readSavedToken());
+
+const CLI_COMMAND = 'npx -y @curlycode/storescreenshot@latest';
 
 const TOKEN_HELP = `Connect your StoreScreenshot account once with:
-  node ${process.argv[1]} login`;
+  ${CLI_COMMAND} login`;
 
 async function readSavedToken() {
   try {
@@ -71,7 +84,7 @@ async function me() {
     fail(`Unexpected response (${status}): ${body?.error ?? 'no details'}`);
   }
 
-  console.log(`Signed in as ${body.email}`);
+  console.log(`Signed in as ${body.email} on ${API_URL}`);
   console.log(`Screenshot credits left: ${body.screenshotCredits}`);
 
   if (!body.emailVerified) {
@@ -101,7 +114,7 @@ function openInBrowser(url) {
   try {
     spawn(command, [url], { stdio: 'ignore', detached: true }).unref();
   } catch {
-    // The URL is printed too, so a missing opener only costs a click.
+    return;
   }
 }
 
@@ -153,7 +166,6 @@ async function waitForApproval({ deviceCode, interval, expiresIn }) {
   fail(LOGIN_FAILURES.expired_token);
 }
 
-/** Connects the account through the browser, like `gh auth login`. */
 async function loginInBrowser() {
   const { status, body } = await postJson('/api/v1/cli/device-code', {});
 
@@ -173,7 +185,6 @@ async function loginInBrowser() {
   console.log(`Connected. Token saved to ${TOKEN_FILE}.`);
 }
 
-/** Saves a token piped on stdin, for machines without a browser. */
 async function loginWithStdinToken() {
   const token = await readStdin();
 
@@ -248,7 +259,7 @@ async function send(argv) {
       prompt: prompt.trim(),
       screenshots,
       deviceFamily: values.device,
-      source: 'claude-code-skill',
+      source: 'cli',
     }),
   });
 
@@ -273,13 +284,33 @@ async function send(argv) {
   fail(`StoreScreenshot refused the request (${status}): ${body?.error ?? 'no details'}`);
 }
 
-const COMMANDS = { login: (argv) => login(argv), me: () => me(), send: (argv) => send(argv) };
+async function version() {
+  const packageJson = JSON.parse(
+    await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+  );
+
+  console.log(packageJson.version);
+}
+
+const COMMANDS = {
+  login: (argv) => login(argv),
+  me: () => me(),
+  send: (argv) => send(argv),
+  '--version': () => version(),
+};
 
 const [command, ...rest] = process.argv.slice(2);
+
+if (API_URL !== DEFAULT_API_URL && command !== '--version') {
+  console.error(`Using ${API_URL} (set by STORESCREENSHOT_API_URL).`);
+}
 const run = COMMANDS[command];
 
 if (!run) {
-  fail('Usage: storescreenshot.mjs login [--token-stdin] | me | send --app-name <name> --description-file <file> <screenshots...>');
+  fail(
+    `Usage: ${CLI_COMMAND} login [--token-stdin] | me | send --app-name <name> --description-file <file> <screenshots...>\n` +
+      'Full guide for coding agents: https://storescreenshot.app/setup.md',
+  );
 }
 
 await run(rest);

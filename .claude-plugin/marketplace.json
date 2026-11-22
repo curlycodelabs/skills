@@ -1,6 +1,9 @@
 {
   "name": "curlycode",
-  "owner": { "name": "CurlyCode Labs", "url": "https://github.com/curlycodelabs" },
+  "owner": {
+    "name": "CurlyCode Labs",
+    "url": "https://github.com/curlycodelabs"
+  },
   "metadata": {
     "description": "Claude Code plugins by CurlyCode Labs."
   },

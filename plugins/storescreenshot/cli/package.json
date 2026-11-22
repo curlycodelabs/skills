@@ -1,0 +1,36 @@
+{
+  "name": "@curlycode/storescreenshot",
+  "version": "1.0.0",
+  "description": "Send your app's screens to StoreScreenshot from any coding agent and get designed App Store screenshots.",
+  "type": "module",
+  "bin": {
+    "storescreenshot": "bin/storescreenshot.mjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "app store screenshots",
+    "app store screenshot generator",
+    "ios",
+    "simulator",
+    "coding agent",
+    "claude code",
+    "cursor",
+    "codex"
+  ],
+  "homepage": "https://storescreenshot.app/setup.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/curlycodelabs/skills.git",
+    "directory": "plugins/storescreenshot/cli"
+  },
+  "author": "CurlyCode Labs",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
