@@ -5,6 +5,51 @@ import { homedir } from 'node:os';
 import { dirname, extname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 
+interface ApiError {
+  error?: string;
+}
+
+interface ApiResponse<T> {
+  status: number;
+  body: Partial<T> & ApiError;
+}
+
+interface Account {
+  email: string;
+  screenshotCredits: number;
+  emailVerified: boolean;
+}
+
+interface DeviceCode {
+  deviceCode: string;
+  userCode: string;
+  verificationUrlComplete: string;
+  interval: number;
+  expiresIn: number;
+}
+
+interface ProjectCreated {
+  creditsSpent: number;
+  studioUrl: string;
+}
+
+interface NotEnoughCredits {
+  creditsNeeded: number;
+  creditsAvailable: number;
+  pricingUrl: string;
+}
+
+interface Screenshot {
+  base64: string;
+  mimeType: string;
+}
+
+interface RequestOptions {
+  method?: string;
+  body?: string;
+  headers?: Record<string, string>;
+}
+
 const DEFAULT_API_URL = 'https://storescreenshot.app';
 
 const API_URL = (process.env.STORESCREENSHOT_API_URL || DEFAULT_API_URL).replace(
@@ -12,7 +57,7 @@ const API_URL = (process.env.STORESCREENSHOT_API_URL || DEFAULT_API_URL).replace
   '',
 );
 
-function tokenFileName() {
+function tokenFileName(): string {
   if (API_URL === DEFAULT_API_URL) {
     return 'token';
   }
@@ -29,7 +74,7 @@ const CLI_COMMAND = 'npx -y @curlycode/storescreenshot@latest';
 const TOKEN_HELP = `Connect your StoreScreenshot account once with:
   ${CLI_COMMAND} login`;
 
-async function readSavedToken() {
+async function readSavedToken(): Promise<string | undefined> {
   try {
     return (await readFile(TOKEN_FILE, 'utf8')).trim() || undefined;
   } catch {
@@ -37,19 +82,31 @@ async function readSavedToken() {
   }
 }
 
-const MIME_TYPES = {
+const MIME_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
 };
 
-function fail(message) {
+function fail(message: string): never {
   console.error(message);
   process.exit(1);
 }
 
-async function request(path, init = {}) {
+function unreachable(error: unknown): never {
+  const reason = error instanceof Error ? error.message : String(error);
+
+  fail(`Could not reach ${API_URL}: ${reason}\nRun the same command again to retry.`);
+}
+
+async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  const text = await response.text();
+
+  return { status: response.status, body: text ? JSON.parse(text) : {} };
+}
+
+async function request<T>(path: string, init: RequestOptions = {}): Promise<ApiResponse<T>> {
   if (!TOKEN) {
     fail(`Not connected to StoreScreenshot yet.\n${TOKEN_HELP}`);
   }
@@ -64,24 +121,35 @@ async function request(path, init = {}) {
       },
     });
 
-    const text = await response.text();
-    const body = text ? JSON.parse(text) : null;
-
-    return { status: response.status, body };
+    return await parseResponse<T>(response);
   } catch (error) {
-    fail(`Could not reach ${API_URL}: ${error.message}\nRun the same command again to retry.`);
+    unreachable(error);
   }
 }
 
-async function me() {
-  const { status, body } = await request('/api/v1/me');
+async function postJson<T>(path: string, payload: unknown): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    return await parseResponse<T>(response);
+  } catch (error) {
+    unreachable(error);
+  }
+}
+
+async function me(): Promise<void> {
+  const { status, body } = await request<Account>('/api/v1/me');
 
   if (status === 401) {
     fail(`The token was refused.\n${TOKEN_HELP}`);
   }
 
   if (status !== 200) {
-    fail(`Unexpected response (${status}): ${body?.error ?? 'no details'}`);
+    fail(`Unexpected response (${status}): ${body.error ?? 'no details'}`);
   }
 
   console.log(`Signed in as ${body.email} on ${API_URL}`);
@@ -92,100 +160,109 @@ async function me() {
   }
 }
 
-async function readStdin() {
-  const chunks = [];
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks).toString('utf8').trim();
 }
 
-async function saveToken(token) {
+async function saveToken(token: string): Promise<void> {
   await mkdir(dirname(TOKEN_FILE), { recursive: true });
   await writeFile(TOKEN_FILE, `${token}\n`, { mode: 0o600 });
   await chmod(TOKEN_FILE, 0o600);
 }
 
-const OPEN_COMMANDS = { darwin: 'open', win32: 'explorer' };
+const OPEN_COMMANDS: Partial<Record<NodeJS.Platform, string>> = {
+  darwin: 'open',
+  win32: 'explorer',
+};
 
-function openInBrowser(url) {
+function openInBrowser(url: string): void {
   const command = OPEN_COMMANDS[process.platform] ?? 'xdg-open';
 
   try {
-    spawn(command, [url], { stdio: 'ignore', detached: true }).unref();
+    // A missing opener (no xdg-open on a server) is reported as an 'error' event, not thrown.
+    spawn(command, [url], { stdio: 'ignore', detached: true })
+      .on('error', () => undefined)
+      .unref();
   } catch {
     return;
   }
 }
 
-async function postJson(path, payload) {
-  try {
-    const response = await fetch(`${API_URL}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const text = await response.text();
+const sleep = (seconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, seconds * 1000));
 
-    return { status: response.status, body: text ? JSON.parse(text) : null };
-  } catch (error) {
-    fail(`Could not reach ${API_URL}: ${error.message}\nRun the same command again to retry.`);
-  }
-}
+const CODE_EXPIRED = 'The code expired before it was approved. Run login again to get a new one.';
 
-const sleep = (seconds) => new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+const LOGIN_FAILURES = new Map([
+  ['access_denied', 'The request was denied in the browser. Run login again to retry.'],
+  ['expired_token', CODE_EXPIRED],
+  ['invalid_grant', 'This login request is no longer valid. Run login again.'],
+]);
 
-const LOGIN_FAILURES = {
-  access_denied: 'The request was denied in the browser. Run login again to retry.',
-  expired_token: 'The code expired before it was approved. Run login again to get a new one.',
-  invalid_grant: 'This login request is no longer valid. Run login again.',
-};
-
-async function waitForApproval({ deviceCode, interval, expiresIn }) {
+async function waitForApproval({
+  deviceCode,
+  interval,
+  expiresIn,
+}: Pick<DeviceCode, 'deviceCode' | 'interval' | 'expiresIn'>): Promise<string> {
   const deadline = Date.now() + expiresIn * 1000;
   let delay = interval;
 
   while (Date.now() < deadline) {
     await sleep(delay);
-    const { status, body } = await postJson('/api/v1/cli/token', { deviceCode });
+    const { status, body } = await postJson<{ token: string }>('/api/v1/cli/token', {
+      deviceCode,
+    });
 
-    if (status === 200 && body?.token) {
+    if (status === 200 && body.token) {
       return body.token;
     }
 
-    if (body?.error === 'slow_down') {
+    if (body.error === 'slow_down') {
       delay += 5;
       continue;
     }
 
-    if (body?.error !== 'authorization_pending') {
-      fail(LOGIN_FAILURES[body?.error] ?? `Login failed (${status}): ${body?.error ?? 'no details'}`);
+    if (body.error !== 'authorization_pending') {
+      const known = body.error === undefined ? undefined : LOGIN_FAILURES.get(body.error);
+
+      fail(known ?? `Login failed (${status}): ${body.error ?? 'no details'}`);
     }
   }
 
-  fail(LOGIN_FAILURES.expired_token);
+  fail(CODE_EXPIRED);
 }
 
-async function loginInBrowser() {
-  const { status, body } = await postJson('/api/v1/cli/device-code', {});
+async function loginInBrowser(): Promise<void> {
+  const { status, body } = await postJson<DeviceCode>('/api/v1/cli/device-code', {});
+  const { deviceCode, userCode, verificationUrlComplete, interval, expiresIn } = body;
 
-  if (status !== 200) {
-    fail(`Could not start the login (${status}): ${body?.error ?? 'no details'}`);
+  if (
+    status !== 200 ||
+    deviceCode === undefined ||
+    verificationUrlComplete === undefined ||
+    interval === undefined ||
+    expiresIn === undefined
+  ) {
+    fail(`Could not start the login (${status}): ${body.error ?? 'no details'}`);
   }
 
   console.log('To connect StoreScreenshot, open this link and click Authorize:');
-  console.log(`  ${body.verificationUrlComplete}`);
-  console.log(`Check that the page shows the code ${body.userCode}.`);
+  console.log(`  ${verificationUrlComplete}`);
+  console.log(`Check that the page shows the code ${userCode}.`);
   console.log('New to StoreScreenshot? The same page lets you sign up for free.');
-  openInBrowser(body.verificationUrlComplete);
+  openInBrowser(verificationUrlComplete);
   console.log('Waiting for approval...');
 
-  const token = await waitForApproval(body);
+  const token = await waitForApproval({ deviceCode, interval, expiresIn });
   await saveToken(token);
   console.log(`Connected. Token saved to ${TOKEN_FILE}.`);
 }
 
-async function loginWithStdinToken() {
+async function loginWithStdinToken(): Promise<void> {
   const token = await readStdin();
 
   if (!token.startsWith('ss_')) {
@@ -196,7 +273,7 @@ async function loginWithStdinToken() {
   console.log(`Token saved to ${TOKEN_FILE}.`);
 }
 
-function login(argv) {
+function login(argv: string[]): Promise<void> {
   if (argv.includes('--token-stdin')) {
     return loginWithStdinToken();
   }
@@ -204,7 +281,7 @@ function login(argv) {
   return loginInBrowser();
 }
 
-async function toScreenshot(path) {
+async function toScreenshot(path: string): Promise<Screenshot> {
   const mimeType = MIME_TYPES[extname(path).toLowerCase()];
 
   if (!mimeType) {
@@ -216,7 +293,7 @@ async function toScreenshot(path) {
   return { base64: buffer.toString('base64'), mimeType };
 }
 
-async function send(argv) {
+async function send(argv: string[]): Promise<void> {
   const { values, positionals } = parseArgs({
     args: argv,
     allowPositionals: true,
@@ -252,7 +329,7 @@ async function send(argv) {
 
   console.log(`Sending ${screenshots.length} screenshots for ${appName}...`);
 
-  const { status, body } = await request('/api/v1/projects', {
+  const { status, body } = await request<ProjectCreated & NotEnoughCredits>('/api/v1/projects', {
     method: 'POST',
     body: JSON.stringify({
       appName,
@@ -281,30 +358,30 @@ async function send(argv) {
     );
   }
 
-  fail(`StoreScreenshot refused the request (${status}): ${body?.error ?? 'no details'}`);
+  fail(`StoreScreenshot refused the request (${status}): ${body.error ?? 'no details'}`);
 }
 
-async function version() {
-  const packageJson = JSON.parse(
+async function version(): Promise<void> {
+  const packageJson: { version: string } = JSON.parse(
     await readFile(new URL('../package.json', import.meta.url), 'utf8'),
   );
 
   console.log(packageJson.version);
 }
 
-const COMMANDS = {
-  login: (argv) => login(argv),
-  me: () => me(),
-  send: (argv) => send(argv),
-  '--version': () => version(),
-};
+const COMMANDS = new Map<string, (argv: string[]) => Promise<void>>([
+  ['login', (argv) => login(argv)],
+  ['me', () => me()],
+  ['send', (argv) => send(argv)],
+  ['--version', () => version()],
+]);
 
 const [command, ...rest] = process.argv.slice(2);
 
 if (API_URL !== DEFAULT_API_URL && command !== '--version') {
   console.error(`Using ${API_URL} (set by STORESCREENSHOT_API_URL).`);
 }
-const run = COMMANDS[command];
+const run = command === undefined ? undefined : COMMANDS.get(command);
 
 if (!run) {
   fail(

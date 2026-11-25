@@ -4,13 +4,17 @@
   "description": "Send your app's screens to StoreScreenshot from any coding agent and get designed App Store screenshots.",
   "type": "module",
   "bin": {
-    "storescreenshot": "bin/storescreenshot.mjs"
+    "storescreenshot": "dist/storescreenshot.js"
   },
   "files": [
-    "bin"
+    "dist"
   ],
   "engines": {
     "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build"
   },
   "keywords": [
     "app store screenshots",
@@ -32,5 +36,9 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.130",
+    "typescript": "^7.0.2"
   }
 }

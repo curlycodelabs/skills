@@ -29,3 +29,7 @@ npx -y @curlycode/storescreenshot@latest send --app-name "My App" --description-
 ## Requirements
 
 Node 18 or newer. Capturing an iOS app needs macOS with Xcode.
+
+## Development
+
+The CLI is written in TypeScript in `src/` and compiled to `dist/`, which is what npm ships. `npm run build` compiles it, and `npm publish` builds it automatically through `prepack`.
