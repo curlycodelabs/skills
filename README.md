@@ -28,6 +28,10 @@ Follow https://storescreenshot.app/setup.md to create App Store screenshots for 
 
 It runs the [`@curlycode/storescreenshot` CLI](plugins/storescreenshot/cli) through `npx`, so there is nothing to install.
 
+## Releases
+
+Every plugin is versioned on its own from [conventional commits](https://www.conventionalcommits.org): on each push to `main`, the release workflow looks at the commits that changed a plugin's folder since its last tag, bumps the version in its `plugin.json`, writes its `CHANGELOG.md`, and tags it `<plugin>-v<version>`. A plugin's npm CLI in `cli/` is released the same way as `<plugin>-cli`, and published to npm. `feat` is a minor release, and `fix`, `perf`, `refactor`, `style`, `chore` and `docs` are patches, since a skill is markdown.
+
 ## License
 
 MIT
