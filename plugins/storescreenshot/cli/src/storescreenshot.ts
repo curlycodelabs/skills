@@ -301,7 +301,6 @@ async function send(argv: string[]): Promise<void> {
       'app-name': { type: 'string' },
       'description-file': { type: 'string' },
       description: { type: 'string' },
-      device: { type: 'string', default: 'iphone' },
     },
   });
 
@@ -335,7 +334,6 @@ async function send(argv: string[]): Promise<void> {
       appName,
       prompt: prompt.trim(),
       screenshots,
-      deviceFamily: values.device,
       source: 'cli',
     }),
   });
